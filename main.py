@@ -24,12 +24,12 @@ class Server:
         # Server connection configuration
         self.host: str = "192.168.1.21"
         self.port: int = 4444
-        self.temp_dir: str = "/tmp"
+        self.pair_config_dir: str = "/tmp"
 
         # Commands file.
         self.command_file: str = "./commands.json"
 
-        self.commands: dict = json.load(open(self.command_file, "r"))
+        self.commands = json.load(open(self.command_file, "r"))
         """
         List of commands
         Keys:
@@ -39,7 +39,7 @@ class Server:
         """
 
     def pair_device(self, device_name) -> None:
-        f = open(self.temp_dir + "/remote_control.conf", "a+")
+        f = open(self.pair_config_dir + "/remote_control.conf", "a+")
         f.write(device_name.endswith(""))
         f.close()
         print(f"Device {device_name} is paired successfully!")
@@ -47,7 +47,7 @@ class Server:
         return
 
     def get_paired_device(self) -> str:
-        f = open(self.temp_dir + "/remote_control.conf", "r")
+        f = open(self.pair_config_dir + "/remote_control.conf", "r")
         device: str = f.readline()
         f.close()
         return device
@@ -72,6 +72,16 @@ class Server:
             print(f"Command Name: {command['name']}")
             print(f"Executable  : {command['executable']}")
             print(f"Arguments   : {command['arguments']}")
+
+    def add_command(self, args: list):
+        with open("./commands.json", "w+") as f:
+            new_command: dict = {
+                "name": args[0],
+                "executable": args[1],
+                "arguments": args[2:]
+            }
+            self.commands.append(new_command)
+            json.dump(self.commands, f)
 
     def listen_for_command(self) -> None:
         receiver = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -98,7 +108,7 @@ class Server:
                 print("Device pairing initialized.")
 
                 # Check if the computer is already paired to a device.
-                if os.path.exists(self.temp_dir + "/remote_control.conf"):
+                if os.path.exists(self.pair_config_dir + "/remote_control.conf"):
                     print(f"Computer was already paired to device '{self.get_paired_device()}'")
                     return
 
@@ -112,11 +122,17 @@ class Server:
             # Execute command
             if args[0] == "execute" and args[1] == self.execute_command(args[1]):
                 pass
-            else:
-                print("No command found.")
 
-            # Close Section
-            connection.close()
+            # Add Command
+            if args[0] == "add" and args[1] == "command":
+                # Check if it has necessary arguments.
+                if len(args[2:]) < 0:
+                    return
+
+                self.add_command(args[2:])
+
+        # Close Section
+        connection.close()
         receiver.close()
 
 
