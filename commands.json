@@ -1,0 +1,22 @@
+[
+  {
+    "name": "shutdown_pc",
+    "executable": "/bin/shutdown",
+    "arguments": [
+      "-P",
+      "00"
+    ]
+  },
+  {
+    "name": "reboot_pc",
+    "executable": "/bin/reboot",
+    "arguments": []
+  },
+  {
+    "name": "sleep_pc",
+    "executable": "/bin/systemctl",
+    "arguments": [
+      "suspend"
+    ]
+  }
+]
