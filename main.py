@@ -93,47 +93,40 @@ class Server:
         )
         # Listen for connection
         print("Listen for connection...")
-        receiver.listen()
-        (connection, address) = receiver.accept()
-        with connection:
-            print(f"Connection found from {address[0]} at {address[1]}")
-            data: bytes = connection.recv(1024)
-            message = decrypt_text(data)
-            args = message.split(" ")
-            if len(args) < 0:
-                return
-
-            # * Device pairing
-            if args[0] == "pair" and len(args) > 1:
-                print("Device pairing initialized.")
-
-                # Check if the computer is already paired to a device.
-                if os.path.exists(self.pair_config_dir + "/remote_control.conf"):
-                    print(f"Computer was already paired to device '{self.get_paired_device()}'")
+        while True:
+            receiver.listen()
+            (connection, address) = receiver.accept()
+            with connection:
+                print(f"Connection found from {address[0]} at {address[1]}")
+                data: bytes = connection.recv(1024)
+                message = decrypt_text(data)
+                args = message.split(" ")
+                if len(args) < 0:
                     return
-
-                answer = input(f"Would you like to accept the device {args[1]}? Y/N: ")
-                if answer.lower() == "y":
-                    self.pair_device(device_name=args[1])
-
-                # Execution will not continue.
-                return
-
-            # Execute command
-            if args[0] == "execute" and args[1] == self.execute_command(args[1]):
-                pass
-
-            # Add Command
-            if args[0] == "add" and args[1] == "command":
-                # Check if it has necessary arguments.
-                if len(args[2:]) < 0:
+                # * Device pairing
+                if args[0] == "pair" and len(args) > 1:
+                    print("Device pairing initialized.")
+                    # Check if the computer is already paired to a device.
+                    if os.path.exists(self.pair_config_dir + "/remote_control.conf"):
+                        print(f"Computer was already paired to device '{self.get_paired_device()}'")
+                        return
+                    answer = input(f"Would you like to accept the device {args[1]}? Y/N: ")
+                    if answer.lower() == "y":
+                        self.pair_device(device_name=args[1])
+                    # Execution will not continue.
                     return
-
-                self.add_command(args[2:])
-
-        # Close Section
-        connection.close()
-        receiver.close()
+                # Execute command
+                if args[0] == "execute" and args[1] == self.execute_command(args[1]):
+                    pass
+                # Add Command
+                if args[0] == "add" and args[1] == "command":
+                    # Check if it has necessary arguments.
+                    if len(args[2:]) < 0:
+                        return
+                    self.add_command(args[2:])
+            # Close Section
+            connection.close()
+            receiver.close()
 
 
 if __name__ == "__main__":
