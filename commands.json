@@ -18,5 +18,13 @@
     "arguments": [
       "suspend"
     ]
+  },
+  {
+    "name": "test_pc",
+    "executable": "/bin/shutdown",
+    "arguments": [
+      "-P",
+      "00"
+    ]
   }
 ]
