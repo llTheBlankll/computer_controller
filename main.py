@@ -4,6 +4,8 @@ import json
 import subprocess
 
 from time import sleep as delay
+from typing import Tuple
+
 from Crypto.Cipher import AES
 
 
@@ -96,37 +98,63 @@ class Server:
         while True:
             receiver.listen()
             (connection, address) = receiver.accept()
-            with connection:
-                print(f"Connection found from {address[0]} at {address[1]}")
-                data: bytes = connection.recv(1024)
-                message = decrypt_text(data)
-                args = message.split(" ")
-                if len(args) < 0:
+
+            print(f"Connection found from {address[0]} at {address[1]}")
+            # message = decrypt_text(data): This is for encryption
+            message = connection.recv(1024).decode("utf-8")
+            args = message.split(" ")
+
+            print(args)
+
+            if len(args) < 0:
+                connection.close()
+                receiver.close()
+                return
+            # * Device pairing
+            if args[0] == "pair" and len(args) > 1:
+                print("Device pairing initialized.")
+                # Check if the computer is already paired to a device.
+                if os.path.exists(self.pair_config_dir + "/remote_control.conf"):
+                    connection.close()
+                    receiver.close()
+                    print(f"Computer was already paired to device '{self.get_paired_device()}'")
                     return
-                # * Device pairing
-                if args[0] == "pair" and len(args) > 1:
-                    print("Device pairing initialized.")
-                    # Check if the computer is already paired to a device.
-                    if os.path.exists(self.pair_config_dir + "/remote_control.conf"):
-                        print(f"Computer was already paired to device '{self.get_paired_device()}'")
-                        return
-                    answer = input(f"Would you like to accept the device {args[1]}? Y/N: ")
-                    if answer.lower() == "y":
-                        self.pair_device(device_name=args[1])
-                    # Execution will not continue.
+
+                answer = input(f"Would you like to accept the device {args[1]}? Y/N: ")
+                if answer.lower() == "y":
+                    self.pair_device(device_name=args[1])
+
+                # Execution will not continue.
+                connection.close()
+                receiver.close()
+                return
+            # Execute command
+            if args[0] == "execute" and args[1] == self.execute_command(args[1]):
+                print("Command execution succeeded.")
+                pass
+            # Add Command
+            if args[0] == "add" and args[1] == "command":
+                # Check if it has necessary arguments.
+                if len(args[2:]) < 0:
+                    connection.close()
+                    receiver.close()
                     return
-                # Execute command
-                if args[0] == "execute" and args[1] == self.execute_command(args[1]):
-                    pass
-                # Add Command
-                if args[0] == "add" and args[1] == "command":
-                    # Check if it has necessary arguments.
-                    if len(args[2:]) < 0:
-                        return
-                    self.add_command(args[2:])
-            # Close Section
-            connection.close()
+
+                self.add_command(args[2:])
+            # Get Command List
+            if args[0] == "get" and args[1] == "command" and args[2] == "list":
+                print("Sending command list")
+                with open("./commands.json", "r") as cjson:
+                    data_to_send: str = cjson.read()
+                    send_data(address, data_to_send)
             receiver.close()
+
+
+def send_data(address: Tuple, data: str):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.connect(("192.168.1.21", 1234))
+    sock.send(data.encode("utf-8"))
+    sock.close()
 
 
 if __name__ == "__main__":
